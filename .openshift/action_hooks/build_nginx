@@ -1,0 +1,41 @@
+#!/bin/bash
+# This deploy hook gets executed after dependencies are resolved and the
+# build hook has been run but before the application has been started back
+# up again.  This script gets executed directly, so it could be python, php,
+# ruby, etc.
+
+# Check nginx binary exist and skip building it
+if [-f  $OPENSHIFT_DATA_DIR/lib/nginx/sbin/nginx ]
+then
+	echo "Nginx exists"
+	exit 0
+fi
+
+# Setup PREFIX_DIR or where the app runs
+PREFIX_DIR=$OPENSHIFT_DATA_DIR/lib/nginx
+mkdir -p $PREFIX_DIR
+
+# setup build_dir
+BUILD_DIR=$OPENSHIFT_TMP_DIR/build
+BUILD_DIR=`mktemp -d`
+mkdir $BUILD_DIR
+pushd $BUILD_DIR
+echo $BUILD_DIR
+
+echo "Tengine(Nginx) v1.4.2 Setup"
+echo "Pre-requisite PCRE"
+wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.31.tar.bz2
+tar jxf pcre-8.31.tar.bz2
+
+
+wget http://tengine.taobao.org/download/tengine-1.4.2.tar.gz
+tar -zxf tengine-1.4.2.tar.gz
+
+cd tengine-1.4.2
+./configure --prefix=$PREFIX_DIR --with-pcre=$BUILD_DIR/pcre-8.31
+make
+make install
+
+popd
+
+rm -rf BUILD_DIR
